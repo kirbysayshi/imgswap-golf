@@ -5,8 +5,8 @@ document.body.appendChild(cvs);
 var ITERATIONS_PER_DRAW = 200;
 var L = [0.2126, 0.7152, 0.0722];
 
-getData('goth.png', cvs, ctx, function(err, source) {
-  getData('mona.png', cvs, ctx, function(err, palette) {
+getData('mona.png', cvs, ctx, function(err, source) {
+  getData('goth.png', cvs, ctx, function(err, palette) {
 
     cvs.width = palette.width;
     cvs.height = palette.height;
