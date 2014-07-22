@@ -2,6 +2,9 @@ var cvs = document.createElement('canvas');
 var ctx = cvs.getContext('2d');
 document.body.appendChild(cvs);
 
+var ITERATIONS_PER_DRAW = 200;
+var L = [0.2126, 0.7152, 0.0722];
+
 getData('goth.png', cvs, ctx, function(err, source) {
   getData('mona.png', cvs, ctx, function(err, palette) {
 
@@ -9,7 +12,10 @@ getData('goth.png', cvs, ctx, function(err, source) {
     cvs.height = palette.height;
 
     (function animate() {
-      swap(palette, source) && draw(palette, ctx)
+      for(var i = 0; i < ITERATIONS_PER_DRAW; i++) {
+        swap(palette, source);
+      }
+      draw(palette, ctx)
       requestAnimationFrame(animate)
     }())
   })
@@ -20,28 +26,35 @@ function swap(palette, source) {
   var max = (palette.data.length / 4) - 1;
   var p1 = Math.floor(Math.random() * max);
   var p2 = Math.floor(Math.random() * max);
-  if (p1 === p2) return;
 
   var pdata = palette.data;
   var sdata = source.data;
 
-  var r1 = Math.abs(pdata[p1+0] - sdata[p1+0]);
-  var g1 = Math.abs(pdata[p1+1] - sdata[p1+1]);
-  var b1 = Math.abs(pdata[p1+2] - sdata[p1+2]);
-  var a1 = Math.abs(pdata[p1+3] - sdata[p1+4]);
+  var p1l = L[0]*pdata[4*p1+0] + L[1]*pdata[4*p1+1] + L[2]*pdata[4*p1+2];
+  var p2l = L[0]*pdata[4*p2+0] + L[1]*pdata[4*p2+1] + L[2]*pdata[4*p2+2];
+  var sl =  L[0]*sdata[4*p1+0] + L[1]*sdata[4*p1+1] + L[2]*sdata[4*p1+2];
 
-  var r2 = Math.abs(pdata[p2+0] - sdata[p1+0]);
-  var g2 = Math.abs(pdata[p2+1] - sdata[p1+1]);
-  var b2 = Math.abs(pdata[p2+2] - sdata[p1+2]);
-  var a2 = Math.abs(pdata[p2+3] - sdata[p1+4]);
+  var p1dist = Math.abs(sl - p1l);
+  var p2dist = Math.abs(sl - p2l);
 
-  if (r2 < r1 && g2 < g1 && b2 < b1) {
-    pdata[p1+0] = pdata[p2+0];
-    pdata[p1+1] = pdata[p2+1];
-    pdata[p1+2] = pdata[p2+2];
-    pdata[p1+3] = pdata[p2+3];
+  if (p2dist < p1dist) {
+    var r = pdata[4*p1+0];
+    var g = pdata[4*p1+1];
+    var b = pdata[4*p1+2];
+    var a = pdata[4*p1+3];
+
+    pdata[4*p1+0] = pdata[4*p2+0];
+    pdata[4*p1+1] = pdata[4*p2+1];
+    pdata[4*p1+2] = pdata[4*p2+2];
+    pdata[4*p1+3] = pdata[4*p2+3];
+
+    pdata[4*p2+0] = r;
+    pdata[4*p2+1] = g;
+    pdata[4*p2+2] = b;
+    pdata[4*p2+3] = a;
     return true;
   }
+
   return false;
 }
 
