@@ -85,6 +85,48 @@ function comparisons(type) {
     }
   }
 
+  types['hsl-distance'] = function(palette, source, indices) {
+
+  }
+
+  // http://www.compuphase.com/cmetric.htm
+  types['colour-distance'] = function(palette, source, indices) {
+    indices = SAMPLE_ALGO(palette, source, indices);
+
+    var p1 = indices[0];
+    var p2 = indices[1];
+
+    var pdata = palette.data;
+    var sdata = source.data;
+
+    var p1r = L[0]*pdata[4*p1+0]
+    var p1g = L[1]*pdata[4*p1+1]
+    var p1b = L[2]*pdata[4*p1+2]
+
+    var p2r = L[0]*pdata[4*p2+0]
+    var p2g = L[1]*pdata[4*p2+1]
+    var p2b = L[2]*pdata[4*p2+2]
+
+    var s1r = L[0]*sdata[4*p1+0]
+    var s1g = L[1]*sdata[4*p1+1]
+    var s1b = L[2]*sdata[4*p1+2]
+
+    var p1dist = colourDistance(p1r, p1g, p1b, s1r, s1g, s1b);
+    var p2dist = colourDistance(p2r, p2g, p2b, s1r, s1g, s1b);
+
+    if (p2dist < p1dist) {
+      swapPixels(pdata, p1, p2);
+    }
+  }
+
+  function colourDistance(r1, g1, b1, r2, g2, b2) {
+    var rmean = (r1+ r2) / 2;
+    var r = r1 - r2;
+    var g = g1 - g2;
+    var b = b1 - b2;
+    return Math.sqrt((((512 + rmean) * r * r) >> 8) + 4*g*g + (((767-rmean)*b*b)>>8));
+  }
+
   return types[type];
 }
 
