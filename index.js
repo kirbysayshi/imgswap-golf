@@ -7,7 +7,7 @@ var ITERATIONS_PER_DRAW = options.iterations || 10000;
 var SOURCE_PATH = options.source || 'mona.png';
 var PALETTE_PATH = options.palette || 'goth.png';
 var SAMPLE_ALGO = samplings(options.sample || 'random');
-var COMPARISON_ALGO = comparisons(options.comparison || 'luminance-distance');
+var COMPARISON_ALGO = comparisons(options.comparison || 'relative-srgb-luminance-difference');
 
 getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   getData(PALETTE_PATH, cvs, ctx, function(err, palette) {
@@ -32,7 +32,7 @@ function comparisons(type) {
   var types = {};
 
   var L = [0.2126, 0.7152, 0.0722];
-  types['luminance-distance'] = function(palette, source, indices) {
+  types['relative-srgb-luminance-difference'] = function(palette, source, indices) {
     indices = SAMPLE_ALGO(palette, source, indices);
     var p1 = indices[0];
     var p2 = indices[1];
@@ -46,6 +46,39 @@ function comparisons(type) {
 
     var p1dist = Math.abs(sl - p1l);
     var p2dist = Math.abs(sl - p2l);
+
+    if (p2dist < p1dist) {
+      swapPixels(pdata, p1, p2);
+    }
+  }
+
+  types['relative-srgb-luminance-distance'] = function(palette, source, indices) {
+    indices = SAMPLE_ALGO(palette, source, indices);
+
+    var p1 = indices[0];
+    var p2 = indices[1];
+
+    var pdata = palette.data;
+    var sdata = source.data;
+
+    var p1r = L[0]*pdata[4*p1+0]
+    var p1g = L[1]*pdata[4*p1+1]
+    var p1b = L[2]*pdata[4*p1+2]
+
+    var p2r = L[0]*pdata[4*p2+0]
+    var p2g = L[1]*pdata[4*p2+1]
+    var p2b = L[2]*pdata[4*p2+2]
+
+    var s1r = L[0]*sdata[4*p1+0]
+    var s1g = L[1]*sdata[4*p1+1]
+    var s1b = L[2]*sdata[4*p1+2]
+
+    var pl1 = Math.sqrt(p1r*p1r*L[0] + p1g*p1g*L[1] + p1b*p1b*L[2])
+    var pl2 = Math.sqrt(p2r*p2r*L[0] + p2g*p2g*L[1] + p2b*p2b*L[2])
+    var sl1 = Math.sqrt(s1r*s1r*L[0] + s1g*s1g*L[1] + s1b*s1b*L[2])
+
+    var p1dist = Math.abs(sl1 - pl1);
+    var p2dist = Math.abs(sl1 - pl2);
 
     if (p2dist < p1dist) {
       swapPixels(pdata, p1, p2);
