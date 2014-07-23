@@ -77,8 +77,8 @@ function comparisons(type) {
     var pl2 = Math.sqrt(p2r*p2r*L[0] + p2g*p2g*L[1] + p2b*p2b*L[2])
     var sl1 = Math.sqrt(s1r*s1r*L[0] + s1g*s1g*L[1] + s1b*s1b*L[2])
 
-    var p1dist = Math.abs(sl1 - pl1);
-    var p2dist = Math.abs(sl1 - pl2);
+    var p1dist = Math.sqrt( (s1r-p1r)*(s1r-p1r) + (s1g-p1g)*(s1g-p1g) + (s1b-p1b)*(s1b-p1b) );
+    var p2dist = Math.sqrt( (s1r-p2r)*(s1r-p2r) + (s1g-p2g)*(s1g-p2g) + (s1b-p2b)*(s1b-p2b) );
 
     if (p2dist < p1dist) {
       swapPixels(pdata, p1, p2);
@@ -86,10 +86,81 @@ function comparisons(type) {
   }
 
   types['hsl-distance'] = function(palette, source, indices) {
+    indices = SAMPLE_ALGO(palette, source, indices);
 
+    var p1 = indices[0];
+    var p2 = indices[1];
+
+    var pdata = palette.data;
+    var sdata = source.data;
+
+    var p1r = L[0]*pdata[4*p1+0]
+    var p1g = L[1]*pdata[4*p1+1]
+    var p1b = L[2]*pdata[4*p1+2]
+
+    var p2r = L[0]*pdata[4*p2+0]
+    var p2g = L[1]*pdata[4*p2+1]
+    var p2b = L[2]*pdata[4*p2+2]
+
+    var s1r = L[0]*sdata[4*p1+0]
+    var s1g = L[1]*sdata[4*p1+1]
+    var s1b = L[2]*sdata[4*p1+2]
+
+    var p1hsl = rgbToHsl(p1r, p1g, p1b, indices);
+    var p1h = p1hsl[0];
+    var p1s = p1hsl[1];
+    var p1l = p1hsl[2];
+
+    var p2hsl = rgbToHsl(p2r, p2g, p2b, indices);
+    var p2h = p2hsl[0];
+    var p2s = p2hsl[1];
+    var p2l = p2hsl[2];
+
+    var s1hsl = rgbToHsl(s1r, s1g, s1b, indices);
+    var s1h = s1hsl[0];
+    var s1s = s1hsl[1];
+    var s1l = s1hsl[2];
+
+    var p1dist = Math.sqrt( (p1h-s1h)*(p1h-s1h) + (p1s-s1s)*(p1s-s1s) + (p1l-s1l)*(p1l-s1l) )
+    var p2dist = Math.sqrt( (p2h-s1h)*(p2h-s1h) + (p2s-s1s)*(p2s-s1s) + (p2l-s1l)*(p2l-s1l) )
+
+    if (p2dist < p1dist) {
+      swapPixels(pdata, p1, p2);
+    }
   }
 
-  // http://www.compuphase.com/cmetric.htm
+  // http://stackoverflow.com/a/9493060/169491
+  function rgbToHsl(r, g, b, out) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    var max = Math.max(r, g, b)
+    var min = Math.min(r, g, b)
+    var h, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0; // achromatic
+    } else {
+      var d = max - min;
+      s = l > 0.5
+        ? d / (2 - max - min)
+        : d / (max + min);
+      if (max === r) {
+        h = (g - b) / d + (g < b ? 6 : 0);
+      } else if (max === g) {
+        h = (b - r) / d + 2;
+      } else {
+        h = (r - g) / d + 4;
+      }
+      h /= 6;
+    }
+
+    out[0] = h;
+    out[1] = s;
+    out[2] = l;
+    return out;
+  }
+
   types['colour-distance'] = function(palette, source, indices) {
     indices = SAMPLE_ALGO(palette, source, indices);
 
@@ -119,6 +190,7 @@ function comparisons(type) {
     }
   }
 
+  // http://www.compuphase.com/cmetric.htm
   function colourDistance(r1, g1, b1, r2, g2, b2) {
     var rmean = (r1+ r2) / 2;
     var r = r1 - r2;
