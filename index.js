@@ -150,17 +150,17 @@ function comparisons(type) {
     var pdata = palette.data;
     var sdata = source.data;
 
-    var p1r = L[0]*pdata[4*p1+0]
-    var p1g = L[1]*pdata[4*p1+1]
-    var p1b = L[2]*pdata[4*p1+2]
+    var p1r = pdata[4*p1+0]
+    var p1g = pdata[4*p1+1]
+    var p1b = pdata[4*p1+2]
 
-    var p2r = L[0]*pdata[4*p2+0]
-    var p2g = L[1]*pdata[4*p2+1]
-    var p2b = L[2]*pdata[4*p2+2]
+    var p2r = pdata[4*p2+0]
+    var p2g = pdata[4*p2+1]
+    var p2b = pdata[4*p2+2]
 
-    var s1r = L[0]*sdata[4*p1+0]
-    var s1g = L[1]*sdata[4*p1+1]
-    var s1b = L[2]*sdata[4*p1+2]
+    var s1r = sdata[4*p1+0]
+    var s1g = sdata[4*p1+1]
+    var s1b = sdata[4*p1+2]
 
     var p1dist = colourDistance(p1r, p1g, p1b, s1r, s1g, s1b);
     var p2dist = colourDistance(p2r, p2g, p2b, s1r, s1g, s1b);
