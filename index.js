@@ -212,9 +212,43 @@ function comparisons(type) {
       indices
     )
 
-    //if (p1s2dist < p1s1dist && p2s1dist < p2s2dist) {
-    //  swapPixels(pdata, p2, p1);
-    //}
+    if (p1s1dist + p2s2dist > p1s2dist + p2s1dist) {
+      swapPixels(pdata, p2, p1);
+    }
+  }
+
+  types['rgb-distance-only-if-better'] = function(palette, source, indices) {
+    indices = SAMPLE_ALGO(palette, source, indices);
+
+    var p1 = indices[0];
+    var p2 = indices[1];
+
+    var pdata = palette.data;
+    var sdata = source.data;
+
+    var p1s1dist = rgbDist(
+      pdata[4*p1+0], pdata[4*p1+1], pdata[4*p1+2],
+      sdata[4*p1+0], sdata[4*p1+1], sdata[4*p1+2],
+      indices
+    )
+
+    var p2s2dist = rgbDist(
+      pdata[4*p2+0], pdata[4*p2+1], pdata[4*p2+2],
+      sdata[4*p2+0], sdata[4*p2+1], sdata[4*p2+2],
+      indices
+    )
+
+    var p1s2dist = rgbDist(
+      pdata[4*p1+0], pdata[4*p1+1], pdata[4*p1+2],
+      sdata[4*p2+0], sdata[4*p2+1], sdata[4*p2+2],
+      indices
+    )
+
+    var p2s1dist = rgbDist(
+      pdata[4*p2+0], pdata[4*p2+1], pdata[4*p2+2],
+      sdata[4*p1+0], sdata[4*p1+1], sdata[4*p1+2],
+      indices
+    )
 
     if (p1s1dist + p2s2dist > p1s2dist + p2s1dist) {
       swapPixels(pdata, p2, p1);
@@ -272,6 +306,14 @@ function rgbHslDist(r1, g1, b1, r2, g2, b2, buffer) {
   var l = l1 - l2;
 
   return Math.sqrt(h*h + s*s + l*l);
+}
+
+function rgbDist(r1, g1, b1, r2, g2, b2, buffer) {
+  var r = r1 - r2;
+  var g = g1 - g2;
+  var b = b1 - b2;
+
+  return Math.sqrt(r*r + g*g + b*b);
 }
 
 function samplings(type) {
