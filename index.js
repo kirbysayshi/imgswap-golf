@@ -12,8 +12,13 @@ var COMPARISON_ALGO = comparisons(options.comparison || 'relative-srgb-luminance
 getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   getData(PALETTE_PATH, cvs, ctx, function(err, palette) {
 
-    cvs.width = palette.width;
-    cvs.height = palette.height;
+    // Make the palette data match the dimensions of the source.
+    var corrected = ctx.createImageData(source.width, source.height);
+    corrected.data.set(palette.data);
+    palette = corrected;
+
+    cvs.width = source.width;
+    cvs.height = source.height;
 
     var indices = [];
 
