@@ -52,7 +52,7 @@ function comparisons(type) {
     }
   }
 
-  types['relative-srgb-luminance-distance'] = function(palette, source, indices) {
+  types['weighted-euclidean-distance-rgb'] = function(palette, source, indices) {
     indices = SAMPLE_ALGO(palette, source, indices);
 
     var p1 = indices[0];
@@ -61,24 +61,27 @@ function comparisons(type) {
     var pdata = palette.data;
     var sdata = source.data;
 
-    var p1r = L[0]*pdata[4*p1+0]
-    var p1g = L[1]*pdata[4*p1+1]
-    var p1b = L[2]*pdata[4*p1+2]
+    var p1r = pdata[4*p1+0]
+    var p1g = pdata[4*p1+1]
+    var p1b = pdata[4*p1+2]
 
-    var p2r = L[0]*pdata[4*p2+0]
-    var p2g = L[1]*pdata[4*p2+1]
-    var p2b = L[2]*pdata[4*p2+2]
+    var p2r = pdata[4*p2+0]
+    var p2g = pdata[4*p2+1]
+    var p2b = pdata[4*p2+2]
 
-    var s1r = L[0]*sdata[4*p1+0]
-    var s1g = L[1]*sdata[4*p1+1]
-    var s1b = L[2]*sdata[4*p1+2]
+    var s1r = sdata[4*p1+0]
+    var s1g = sdata[4*p1+1]
+    var s1b = sdata[4*p1+2]
 
-    var pl1 = Math.sqrt(p1r*p1r*L[0] + p1g*p1g*L[1] + p1b*p1b*L[2])
-    var pl2 = Math.sqrt(p2r*p2r*L[0] + p2g*p2g*L[1] + p2b*p2b*L[2])
-    var sl1 = Math.sqrt(s1r*s1r*L[0] + s1g*s1g*L[1] + s1b*s1b*L[2])
+    // http://robots.thoughtbot.com/closer-look-color-lightness
+    // https://citational.com/v/615
 
-    var p1dist = Math.sqrt( (s1r-p1r)*(s1r-p1r) + (s1g-p1g)*(s1g-p1g) + (s1b-p1b)*(s1b-p1b) );
-    var p2dist = Math.sqrt( (s1r-p2r)*(s1r-p2r) + (s1g-p2g)*(s1g-p2g) + (s1b-p2b)*(s1b-p2b) );
+    var pl1 = Math.sqrt(p1r*p1r*0.299 + p1g*p1g*0.587 + p1b*p1b*0.114)
+    var pl2 = Math.sqrt(p2r*p2r*0.299 + p2g*p2g*0.587 + p2b*p2b*0.114)
+    var sl1 = Math.sqrt(s1r*s1r*0.299 + s1g*s1g*0.587 + s1b*s1b*0.114)
+
+    var p1dist = Math.abs(sl1 - pl1);
+    var p2dist = Math.abs(sl1 - pl2);
 
     if (p2dist < p1dist) {
       swapPixels(pdata, p1, p2);
@@ -94,17 +97,17 @@ function comparisons(type) {
     var pdata = palette.data;
     var sdata = source.data;
 
-    var p1r = L[0]*pdata[4*p1+0]
-    var p1g = L[1]*pdata[4*p1+1]
-    var p1b = L[2]*pdata[4*p1+2]
+    var p1r = pdata[4*p1+0]
+    var p1g = pdata[4*p1+1]
+    var p1b = pdata[4*p1+2]
 
-    var p2r = L[0]*pdata[4*p2+0]
-    var p2g = L[1]*pdata[4*p2+1]
-    var p2b = L[2]*pdata[4*p2+2]
+    var p2r = pdata[4*p2+0]
+    var p2g = pdata[4*p2+1]
+    var p2b = pdata[4*p2+2]
 
-    var s1r = L[0]*sdata[4*p1+0]
-    var s1g = L[1]*sdata[4*p1+1]
-    var s1b = L[2]*sdata[4*p1+2]
+    var s1r = sdata[4*p1+0]
+    var s1g = sdata[4*p1+1]
+    var s1b = sdata[4*p1+2]
 
     var p1hsl = rgbToHsl(p1r, p1g, p1b, indices);
     var p1h = p1hsl[0];
@@ -121,8 +124,11 @@ function comparisons(type) {
     var s1s = s1hsl[1];
     var s1l = s1hsl[2];
 
-    var p1dist = Math.sqrt( (p1h-s1h)*(p1h-s1h) + (p1s-s1s)*(p1s-s1s) + (p1l-s1l)*(p1l-s1l) )
-    var p2dist = Math.sqrt( (p2h-s1h)*(p2h-s1h) + (p2s-s1s)*(p2s-s1s) + (p2l-s1l)*(p2l-s1l) )
+    var h1 = Math.min(1+p1h-s1h, Math.abs(p1h-s1h));
+    var h2 = Math.min(1+p2h-s1h, Math.abs(p2h-s1h));
+
+    var p1dist = Math.sqrt( h1*h1 + (p1s-s1s)*(p1s-s1s) + (p1l-s1l)*(p1l-s1l) )
+    var p2dist = Math.sqrt( h2*h2 + (p2s-s1s)*(p2s-s1s) + (p2l-s1l)*(p2l-s1l) )
 
     if (p2dist < p1dist) {
       swapPixels(pdata, p1, p2);
