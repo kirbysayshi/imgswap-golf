@@ -135,37 +135,6 @@ function comparisons(type) {
     }
   }
 
-  // http://stackoverflow.com/a/9493060/169491
-  function rgbToHsl(r, g, b, out) {
-    r /= 255;
-    g /= 255;
-    b /= 255;
-    var max = Math.max(r, g, b)
-    var min = Math.min(r, g, b)
-    var h, s, l = (max + min) / 2;
-
-    if (max === min) {
-      h = s = 0; // achromatic
-    } else {
-      var d = max - min;
-      s = l > 0.5
-        ? d / (2 - max - min)
-        : d / (max + min);
-      if (max === r) {
-        h = (g - b) / d + (g < b ? 6 : 0);
-      } else if (max === g) {
-        h = (b - r) / d + 2;
-      } else {
-        h = (r - g) / d + 4;
-      }
-      h /= 6;
-    }
-
-    out[0] = h;
-    out[1] = s;
-    out[2] = l;
-    return out;
-  }
 
   types['colour-distance'] = function(palette, source, indices) {
     indices = SAMPLE_ALGO(palette, source, indices);
@@ -205,7 +174,99 @@ function comparisons(type) {
     return Math.sqrt((((512 + rmean) * r * r) >> 8) + 4*g*g + (((767-rmean)*b*b)>>8));
   }
 
+  types['hsl-distance-only-if-better'] = function(palette, source, indices) {
+    indices = SAMPLE_ALGO(palette, source, indices);
+
+    var p1 = indices[0];
+    var p2 = indices[1];
+
+    var pdata = palette.data;
+    var sdata = source.data;
+
+    var p1s1dist = rgbHslDist(
+      pdata[4*p1+0], pdata[4*p1+1], pdata[4*p1+2],
+      sdata[4*p1+0], sdata[4*p1+1], sdata[4*p1+2],
+      indices
+    )
+
+    var p2s2dist = rgbHslDist(
+      pdata[4*p2+0], pdata[4*p2+1], pdata[4*p2+2],
+      sdata[4*p2+0], sdata[4*p2+1], sdata[4*p2+2],
+      indices
+    )
+
+    var p1s2dist = rgbHslDist(
+      pdata[4*p1+0], pdata[4*p1+1], pdata[4*p1+2],
+      sdata[4*p2+0], sdata[4*p2+1], sdata[4*p2+2],
+      indices
+    )
+
+    var p2s1dist = rgbHslDist(
+      pdata[4*p2+0], pdata[4*p2+1], pdata[4*p2+2],
+      sdata[4*p1+0], sdata[4*p1+1], sdata[4*p1+2],
+      indices
+    )
+
+    //if (p1s2dist < p1s1dist && p2s1dist < p2s2dist) {
+    //  swapPixels(pdata, p2, p1);
+    //}
+
+    if (p1s1dist + p2s2dist > p1s2dist + p2s1dist) {
+      swapPixels(pdata, p2, p1);
+    }
+  }
+
   return types[type];
+}
+
+// http://stackoverflow.com/a/9493060/169491
+function rgbToHsl(r, g, b, out) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  var max = Math.max(r, g, b)
+  var min = Math.min(r, g, b)
+  var h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0; // achromatic
+  } else {
+    var d = max - min;
+    s = l > 0.5
+      ? d / (2 - max - min)
+      : d / (max + min);
+    if (max === r) {
+      h = (g - b) / d + (g < b ? 6 : 0);
+    } else if (max === g) {
+      h = (b - r) / d + 2;
+    } else {
+      h = (r - g) / d + 4;
+    }
+    h /= 6;
+  }
+
+  out[0] = h;
+  out[1] = s;
+  out[2] = l;
+  return out;
+}
+
+function rgbHslDist(r1, g1, b1, r2, g2, b2, buffer) {
+  var hsl1 = rgbToHsl(r1, g1, b1, buffer);
+  var h1 = hsl1[0];
+  var s1 = hsl1[1];
+  var l1 = hsl1[2];
+
+  var hsl2 = rgbToHsl(r2, g2, b2, buffer);
+  var h2 = hsl2[0];
+  var s2 = hsl2[1];
+  var l2 = hsl2[2];
+
+  var h = Math.min(1+h1-h2, Math.abs(h1-h2));
+  var s = s1 - s2;
+  var l = l1 - l2;
+
+  return Math.sqrt(h*h + s*s + l*l);
 }
 
 function samplings(type) {
