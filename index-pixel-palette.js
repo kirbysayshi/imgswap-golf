@@ -21,7 +21,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
     var min = Number.MAX_VALUE;
     var target = -1;
     forEachPixel(means, function(mr, mg, mb, ma, _, pindex) {
-      var dist = rgbDist(r, g, b, mr, mg, mb, buffer);
+      var dist = rgbDist2(r, g, b, mr, mg, mb);
       if (dist < min) {
         min = dist;
         target = pindex;
@@ -34,19 +34,30 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
 
   console.log('means', JSON.stringify(means));
   console.log('clusters', clusters);
+
+  var convergeCount = 0;
+
+  console.time('convergence');
   (function converge() {
     setTimeout(function() {
+      convergeCount += 1;
+      console.time('means');
       updateMeansFromClusters(means, clusters);
+      console.timeEnd('means');
       console.log('means', JSON.stringify(means));
+      console.time('clusters');
       var moved = updateClusters(means, clusters);
+      console.timeEnd('clusters');
       console.log('pixels moved', moved);
-      console.log('clusters', clusters);
+      //console.log('clusters', clusters);
       if (moved > 0) converge();
       else {
         console.log('means', JSON.stringify(means));
         console.log('clusters', clusters)
+        console.log('converged in', convergeCount);
         applyPalette(PALETTE, clusters);
         draw(source, ctx);
+        console.timeEnd('convergence');
       }
     }, 0)
   }())
@@ -100,13 +111,16 @@ function updateClusters(means, clusters) {
   var buffer = [];
   var movementCount = 0;
   clusters.forEach(function(cluster, i) {
-    cluster.forEach(function(pixel, pixelListIndex) {
+    for (var j = 0; j < cluster.length; j++) {
+      var pixel = cluster[j];
+      var pixelListIndex = j;
+
       var currentClusterIndex = i;
       var min = Number.MAX_VALUE;
       var target = currentClusterIndex;
 
       forEachPixel(means, function(mr, mg, mb, ma, dindex, clusterIndex) {
-        var dist = rgbDist(mr, mg, mb, pixel[0], pixel[1], pixel[2], buffer);
+        var dist = rgbDist2(mr, mg, mb, pixel[0], pixel[1], pixel[2]);
         if (dist < min) {
           min = dist;
           target = clusterIndex;
@@ -114,21 +128,39 @@ function updateClusters(means, clusters) {
       });
 
       if (target != currentClusterIndex) {
-        clusters[target].push(cluster.splice(pixelListIndex, 1)[0]);
+        movePixelToCluster(clusters, currentClusterIndex, target, pixelListIndex);
         movementCount += 1;
       }
-    })
+    }
   });
 
   return movementCount;
 }
 
-function rgbDist(r1, g1, b1, r2, g2, b2, buffer) {
+function movePixelToCluster(clusters, current, target, pixelIndex) {
+  // Profiling shows this to be much faster than a splice, likely
+  // due to lack of return array creation.
+  var currentCluster = clusters[current];
+  var pixel = currentCluster[pixelIndex];
+  var last = currentCluster.pop();
+  currentCluster[pixelIndex] = last;
+  clusters[target].push(pixel);
+}
+
+function rgbDist(r1, g1, b1, r2, g2, b2) {
   var r = r1 - r2;
   var g = g1 - g2;
   var b = b1 - b2;
 
   return Math.sqrt(r*r + g*g + b*b);
+}
+
+function rgbDist2(r1, g1, b1, r2, g2, b2) {
+  var r = r1 - r2;
+  var g = g1 - g2;
+  var b = b1 - b2;
+
+  return r*r + g*g + b*b;
 }
 
 function generateKInitialPixelMeans(k, source) {
