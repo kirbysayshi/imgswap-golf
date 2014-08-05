@@ -114,26 +114,39 @@ function updateClusters(means, clusters, sourceData) {
     for (var j = 0; j < cluster._occupiedLength; j++) {
       var didx = cluster[j];
 
-      var currentClusterIndex = i;
-      var min = Number.MAX_VALUE;
-      var target = currentClusterIndex;
+      var targetClusterIndex = clusterIndexForPixel(means, sourceData, didx);
 
-      forEachPixel(means, function(mr, mg, mb, ma, _, clusterIndex) {
-        var dist = rgbDist2(mr, mg, mb, sourceData[didx+0], sourceData[didx+1], sourceData[didx+2]);
-        if (dist < min) {
-          min = dist;
-          target = clusterIndex;
-        }
-      });
-
-      if (target != currentClusterIndex) {
-        clusterMoveIndexTo(cluster, clusters[target], j);
+      if (targetClusterIndex != i) {
+        clusterMoveIndexTo(cluster, clusters[targetClusterIndex], j);
         movementCount += 1;
       }
     }
   }
 
   return movementCount;
+}
+
+function clusterIndexForPixel(means, sourceData, dataIdx) {
+  var min = Number.MAX_VALUE;
+  var target = -1;
+  for (var i = 0; i < means.length; i += 4) {
+    var dist = rgbDist2(
+      means[i+0],
+      means[i+1],
+      means[i+2],
+
+      sourceData[dataIdx+0],
+      sourceData[dataIdx+1],
+      sourceData[dataIdx+2]
+    )
+
+    if (dist < min) {
+      min = dist;
+      target = i;
+    }
+  }
+
+  return target / 4;
 }
 
 function clusterPush(cluster, value) {
