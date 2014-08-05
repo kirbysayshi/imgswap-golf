@@ -10,6 +10,9 @@ var PALETTE = options.palette
 var ASYNC = options.async === 'false'
   ? false
   : true;
+var REVERSE_PALETTE = options.reverse === 'true'
+  ? true
+  : false;
 
 getData(SOURCE_PATH, cvs, ctx, function(err, source) {
 
@@ -54,7 +57,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   function finish() {
     console.log('converged in', convergeCount);
 
-    applyPalette(PALETTE, clusters, source.data);
+    applyPalette(PALETTE, clusters, source.data, REVERSE_PALETTE);
     draw(source, ctx);
 
     console.timeEnd && console.timeEnd('convergence');
@@ -70,7 +73,26 @@ function converge(means, clusters, sourceData) {
 // palette is an array of pixel ints
 // source is source imgdata
 // clusters are an array of Int8Array(pixelcount) that contain indices into pixel data
-function applyPalette(palette, clusters, sourceData) {
+function applyPalette(palette, clusters, sourceData, opt_reverse) {
+
+  if (opt_reverse) {
+    var half = palette.length / 2;
+    var end = palette.length - 1 - 3;
+    for (var i = 0; i < half; i += 4) {
+      var r = palette[end - i + 0];
+      palette[end - i + 0] = palette[i + 0]
+      palette[i + 0] = r;
+
+      var g = palette[end - i + 1];
+      palette[end - i + 1] = palette[i + 1]
+      palette[i + 1] = g;
+
+      var b = palette[end - i + 2];
+      palette[end - i + 2] = palette[i + 2]
+      palette[i + 2] = b;
+    }
+  }
+
   for (var i = 0; i < clusters.length; i++) {
     var cluster = clusters[i];
     for (var j = 0; j < cluster._occupiedLength; j++) {
