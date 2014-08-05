@@ -7,6 +7,9 @@ var SOURCE_PATH = options.source || 'mona.png';
 var PALETTE = options.palette
   ? options.palette[0] == '[' && JSON.parse(options.palette)
   : predefinedPalettes(options.palette);
+var ASYNC = options.async === 'false'
+  ? false
+  : true;
 
 getData(SOURCE_PATH, cvs, ctx, function(err, source) {
 
@@ -21,41 +24,52 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
     clusterPush(clusters[target], dindex);
   })
 
-  console.log('means', JSON.stringify(means));
-  console.log('clusters', clusters);
-
   var convergeCount = 0;
+  console.time && console.time('convergence');
 
-  console.time('convergence');
-  (function converge() {
-    setTimeout(function() {
+  if (ASYNC) {
+
+    (function next() {
+      setTimeout(function() {
+        convergeCount += 1;
+        if(converge(means, clusters, source.data) > 0) {
+          next();
+        } else {
+          finish();
+        }
+      }, 0)
+    }());
+
+  } else {
+    var moved = 1;
+
+    while (moved > 0) {
       convergeCount += 1;
-      console.time('means');
-      updateMeansFromClusters(means, clusters, source.data);
-      console.timeEnd('means');
-      console.log('means', JSON.stringify(means));
-      console.time('clusters');
-      var moved = updateClusters(means, clusters, source.data);
-      console.timeEnd('clusters');
-      console.log('pixels moved', moved);
-      //console.log('clusters', clusters);
-      if (moved > 0) converge();
-      else {
-        console.log('means', JSON.stringify(means));
-        console.log('clusters', clusters)
-        console.log('converged in', convergeCount);
-        applyPalette(PALETTE, clusters, source.data);
-        draw(source, ctx);
-        console.timeEnd('convergence');
-      }
-    }, 0)
-  }())
+      moved = converge(means, clusters, source.data);
+    }
+
+    finish();
+  }
+
+  function finish() {
+    console.log('converged in', convergeCount);
+
+    applyPalette(PALETTE, clusters, source.data);
+    draw(source, ctx);
+
+    console.timeEnd && console.timeEnd('convergence');
+  }
+
 })
+
+function converge(means, clusters, sourceData) {
+  updateMeansFromClusters(means, clusters, sourceData);
+  return updateClusters(means, clusters, sourceData);
+}
 
 // palette is an array of pixel ints
 // source is source imgdata
-// clusters are an array(palette/4) of arrays of pixel uint8array views that are
-// viewing the original pixel data.
+// clusters are an array of Int8Array(pixelcount) that contain indices into pixel data
 function applyPalette(palette, clusters, sourceData) {
   for (var i = 0; i < clusters.length; i++) {
     var cluster = clusters[i];
