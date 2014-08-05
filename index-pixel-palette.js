@@ -10,7 +10,7 @@ var PALETTE = options.palette
 var ASYNC = options.async === 'false'
   ? false
   : true;
-var REVERSE_PALETTE = options.reverse === 'true'
+var INVERSE_PALETTE = options.inverse === 'true'
   ? true
   : false;
 
@@ -57,7 +57,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   function finish() {
     console.log('converged in', convergeCount);
 
-    applyPalette(PALETTE, clusters, source.data, REVERSE_PALETTE);
+    applyPalette(PALETTE, clusters, source.data, INVERSE_PALETTE);
     draw(source, ctx);
 
     console.timeEnd && console.timeEnd('convergence');
