@@ -16,6 +16,11 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   var clusters = new Array(clusterCount);
   var buffer = [];
 
+  // Ensure cluster arrays exist.
+  for (var i = 0; i < clusterCount; i++) {
+    clusters[i] = [];
+  }
+
   // Create initial clusters by finding distance to initial means.
   forEachPixel(source.data, function(r, g, b, a, dindex) {
     var min = Number.MAX_VALUE;
@@ -28,7 +33,6 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
       }
     })
 
-    clusters[target] = clusters[target] || [];
     clusters[target].push(new Uint8Array(source.data.buffer, dindex, 4));
   })
 
