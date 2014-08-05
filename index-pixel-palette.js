@@ -17,16 +17,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
 
   // Create initial clusters by finding distance to initial means.
   forEachPixel(source.data, function(r, g, b, a, dindex) {
-    var min = Number.MAX_VALUE;
-    var target = -1;
-    forEachPixel(means, function(mr, mg, mb, ma, _, pindex) {
-      var dist = rgbDist2(r, g, b, mr, mg, mb);
-      if (dist < min) {
-        min = dist;
-        target = pindex;
-      }
-    })
-
+    var target = clusterIndexForPixel(means, source.data, dindex);
     clusterPush(clusters[target], dindex);
   })
 
