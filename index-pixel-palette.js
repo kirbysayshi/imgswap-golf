@@ -13,13 +13,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   // a.k.a. the number of target pixels
   var clusterCount = PALETTE.length / 4;
   var means = generateKInitialPixelMeans(clusterCount, source);
-  var clusters = new Array(clusterCount);
-  var buffer = [];
-
-  // Ensure cluster arrays exist.
-  for (var i = 0; i < clusterCount; i++) {
-    clusters[i] = [];
-  }
+  var clusters = allocateClusters(clusterCount, source.data.length / 4);
 
   // Create initial clusters by finding distance to initial means.
   forEachPixel(source.data, function(r, g, b, a, dindex) {
@@ -33,7 +27,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
       }
     })
 
-    clusters[target].push(new Uint8Array(source.data.buffer, dindex, 4));
+    clusterPush(clusters[target], dindex);
   })
 
   console.log('means', JSON.stringify(means));
@@ -46,11 +40,11 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
     setTimeout(function() {
       convergeCount += 1;
       console.time('means');
-      updateMeansFromClusters(means, clusters);
+      updateMeansFromClusters(means, clusters, source.data);
       console.timeEnd('means');
       console.log('means', JSON.stringify(means));
       console.time('clusters');
-      var moved = updateClusters(means, clusters);
+      var moved = updateClusters(means, clusters, source.data);
       console.timeEnd('clusters');
       console.log('pixels moved', moved);
       //console.log('clusters', clusters);
@@ -59,7 +53,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
         console.log('means', JSON.stringify(means));
         console.log('clusters', clusters)
         console.log('converged in', convergeCount);
-        applyPalette(PALETTE, clusters);
+        applyPalette(PALETTE, clusters, source.data);
         draw(source, ctx);
         console.timeEnd('convergence');
       }
@@ -71,60 +65,61 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
 // source is source imgdata
 // clusters are an array(palette/4) of arrays of pixel uint8array views that are
 // viewing the original pixel data.
-function applyPalette(palette, clusters) {
+function applyPalette(palette, clusters, sourceData) {
   for (var i = 0; i < clusters.length; i++) {
     var cluster = clusters[i];
-    for (var j = 0; j < cluster.length; j++) {
-      var pixel = cluster[j];
-      pixel[0] = palette[i*4+0];
-      pixel[1] = palette[i*4+1];
-      pixel[2] = palette[i*4+2];
+    for (var j = 0; j < cluster._occupiedLength; j++) {
+      var p = cluster[j];
+      sourceData[p+0] = palette[i*4+0];
+      sourceData[p+1] = palette[i*4+1];
+      sourceData[p+2] = palette[i*4+2];
     }
   }
 
 }
 
 // means are an array of pixel integers
-// clusters are an array of arrays of Uint8Arrays(4) (pixels)
-function updateMeansFromClusters(means, clusters) {
+// clusters are an array of Int8Array(pixelcount) that contain indices into pixel data
+function updateMeansFromClusters(means, clusters, sourceData) {
 
-  clusters.forEach(function(cluster, i) {
+  clusters.forEach(function(cluster, meanIdx) {
     var r = 0, g = 0, b = 0;
-    cluster.forEach(function(pixel) {
-      r += pixel[0];
-      g += pixel[1];
-      b += pixel[2];
-    });
+
+    for (var i = 0; i < cluster._occupiedLength; i++) {
+      var sourceIdx = cluster[i];
+      r += sourceData[sourceIdx+0];
+      g += sourceData[sourceIdx+1];
+      b += sourceData[sourceIdx+2];
+    }
 
     // cluster length of 0 means NaN.
-    var meanR = Math.floor(r / cluster.length) || 0;
-    var meanG = Math.floor(g / cluster.length) || 0;
-    var meanB = Math.floor(b / cluster.length) || 0;
+    var meanR = Math.floor(r / cluster._occupiedLength) || 0;
+    var meanG = Math.floor(g / cluster._occupiedLength) || 0;
+    var meanB = Math.floor(b / cluster._occupiedLength) || 0;
 
-    means[i*4+0] = meanR;
-    means[i*4+1] = meanG;
-    means[i*4+2] = meanB;
+    means[meanIdx*4+0] = meanR;
+    means[meanIdx*4+1] = meanG;
+    means[meanIdx*4+2] = meanB;
   });
 
   return means;
 }
 
 // means are an array of pixel integers
-// clusters are an array of arrays of Uint8Arrays(4) (pixels)
-function updateClusters(means, clusters) {
-  var buffer = [];
+// clusters are an array of Int8Array(pixelcount) that contain indices into pixel data
+function updateClusters(means, clusters, sourceData) {
   var movementCount = 0;
-  clusters.forEach(function(cluster, i) {
-    for (var j = 0; j < cluster.length; j++) {
-      var pixel = cluster[j];
-      var pixelListIndex = j;
+  for (var i = 0; i < clusters.length; i++) {
+    var cluster = clusters[i];
+    for (var j = 0; j < cluster._occupiedLength; j++) {
+      var didx = cluster[j];
 
       var currentClusterIndex = i;
       var min = Number.MAX_VALUE;
       var target = currentClusterIndex;
 
-      forEachPixel(means, function(mr, mg, mb, ma, dindex, clusterIndex) {
-        var dist = rgbDist2(mr, mg, mb, pixel[0], pixel[1], pixel[2]);
+      forEachPixel(means, function(mr, mg, mb, ma, _, clusterIndex) {
+        var dist = rgbDist2(mr, mg, mb, sourceData[didx+0], sourceData[didx+1], sourceData[didx+2]);
         if (dist < min) {
           min = dist;
           target = clusterIndex;
@@ -132,23 +127,40 @@ function updateClusters(means, clusters) {
       });
 
       if (target != currentClusterIndex) {
-        movePixelToCluster(clusters, currentClusterIndex, target, pixelListIndex);
+        clusterMoveIndexTo(cluster, clusters[target], j);
         movementCount += 1;
       }
     }
-  });
+  }
 
   return movementCount;
 }
 
-function movePixelToCluster(clusters, current, target, pixelIndex) {
-  // Profiling shows this to be much faster than a splice, likely
-  // due to lack of return array creation.
-  var currentCluster = clusters[current];
-  var pixel = currentCluster[pixelIndex];
-  var last = currentCluster.pop();
-  currentCluster[pixelIndex] = last;
-  clusters[target].push(pixel);
+function clusterPush(cluster, value) {
+  if (cluster._occupiedLength == cluster.length) {
+    throw new Error('Out of cluster memory');
+  }
+
+  cluster[cluster._occupiedLength] = value;
+  cluster._occupiedLength += 1;
+
+  return cluster._occupiedLength;
+}
+
+function clusterMoveIndexTo(src, dst, index) {
+  clusterPush(dst, src[index]);
+  src[index] = src[src._occupiedLength-1];
+  src._occupiedLength -= 1;
+}
+
+function allocateClusters(numClusters, maxEntries) {
+  var clusters = [];
+  for (var i = 0; i < numClusters; i++) {
+    var cluster = new Uint32Array(maxEntries);
+    cluster._occupiedLength = 0;
+    clusters.push(cluster);
+  }
+  return clusters;
 }
 
 function rgbDist(r1, g1, b1, r2, g2, b2) {
