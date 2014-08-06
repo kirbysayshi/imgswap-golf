@@ -14,6 +14,11 @@ var INVERSE_PALETTE = options.inverse === 'true'
   ? true
   : false;
 
+// TODO: if source.data.length > N, auto switch to async unless overridden.
+// TODO: fix degenerative case where only clusterCount colors exist already.
+// TODO: draw each converge call if async.
+// TODO: reverse palette if enabled early, not at draw time.
+
 getData(SOURCE_PATH, cvs, ctx, function(err, source) {
 
   // a.k.a. the number of target pixels
@@ -144,7 +149,8 @@ function updateClusters(means, clusters, sourceData) {
       var targetClusterIndex = clusterIndexForPixel(means, sourceData, didx);
 
       if (targetClusterIndex != i) {
-        clusterMoveIndexTo(cluster, clusters[targetClusterIndex], j);
+        clusters[targetClusterIndex].push(cluster.get(index));
+        cluster.remove(index);
         movementCount += 1;
       }
     }
@@ -174,11 +180,6 @@ function clusterIndexForPixel(means, sourceData, dataIdx) {
   }
 
   return target / 4;
-}
-
-function clusterMoveIndexTo(src, dst, index) {
-  dst.push(src.get(index));
-  src.remove(index);
 }
 
 function allocateClusters(numClusters, maxEntries) {
