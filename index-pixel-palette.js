@@ -24,7 +24,7 @@ getData(SOURCE_PATH, cvs, ctx, function(err, source) {
   // Create initial clusters by finding distance to initial means.
   forEachPixel(source.data, function(r, g, b, a, dindex) {
     var target = clusterIndexForPixel(means, source.data, dindex);
-    clusterPush(clusters[target], dindex);
+    clusters[target].push(dindex);
   })
 
   var convergeCount = 0;
@@ -95,8 +95,8 @@ function applyPalette(palette, clusters, sourceData, opt_reverse) {
 
   for (var i = 0; i < clusters.length; i++) {
     var cluster = clusters[i];
-    for (var j = 0; j < cluster._occupiedLength; j++) {
-      var p = cluster[j];
+    for (var j = 0; j < cluster.length(); j++) {
+      var p = cluster.get(j);
       sourceData[p+0] = palette[i*4+0];
       sourceData[p+1] = palette[i*4+1];
       sourceData[p+2] = palette[i*4+2];
@@ -112,17 +112,17 @@ function updateMeansFromClusters(means, clusters, sourceData) {
   clusters.forEach(function(cluster, meanIdx) {
     var r = 0, g = 0, b = 0;
 
-    for (var i = 0; i < cluster._occupiedLength; i++) {
-      var sourceIdx = cluster[i];
+    for (var i = 0; i < cluster.length(); i++) {
+      var sourceIdx = cluster.get(i);
       r += sourceData[sourceIdx+0];
       g += sourceData[sourceIdx+1];
       b += sourceData[sourceIdx+2];
     }
 
     // cluster length of 0 means NaN.
-    var meanR = Math.floor(r / cluster._occupiedLength) || 0;
-    var meanG = Math.floor(g / cluster._occupiedLength) || 0;
-    var meanB = Math.floor(b / cluster._occupiedLength) || 0;
+    var meanR = Math.floor(r / cluster.length()) || 0;
+    var meanG = Math.floor(g / cluster.length()) || 0;
+    var meanB = Math.floor(b / cluster.length()) || 0;
 
     means[meanIdx*4+0] = meanR;
     means[meanIdx*4+1] = meanG;
@@ -138,8 +138,8 @@ function updateClusters(means, clusters, sourceData) {
   var movementCount = 0;
   for (var i = 0; i < clusters.length; i++) {
     var cluster = clusters[i];
-    for (var j = 0; j < cluster._occupiedLength; j++) {
-      var didx = cluster[j];
+    for (var j = 0; j < cluster.length(); j++) {
+      var didx = cluster.get(j);
 
       var targetClusterIndex = clusterIndexForPixel(means, sourceData, didx);
 
@@ -176,31 +176,42 @@ function clusterIndexForPixel(means, sourceData, dataIdx) {
   return target / 4;
 }
 
-function clusterPush(cluster, value) {
-  if (cluster._occupiedLength == cluster.length) {
-    throw new Error('Out of cluster memory');
-  }
-
-  cluster[cluster._occupiedLength] = value;
-  cluster._occupiedLength += 1;
-
-  return cluster._occupiedLength;
-}
-
 function clusterMoveIndexTo(src, dst, index) {
-  clusterPush(dst, src[index]);
-  src[index] = src[src._occupiedLength-1];
-  src._occupiedLength -= 1;
+  dst.push(src.get(index));
+  src.remove(index);
 }
 
 function allocateClusters(numClusters, maxEntries) {
   var clusters = [];
   for (var i = 0; i < numClusters; i++) {
-    var cluster = new Uint32Array(maxEntries);
-    cluster._occupiedLength = 0;
-    clusters.push(cluster);
+    clusters.push(new AllocatedArray(maxEntries));
   }
   return clusters;
+}
+
+function AllocatedArray(maxLength, opt_type) {
+  this._length = 0;
+  this.data = new (opt_type || Uint32Array)(maxLength);
+}
+
+AllocatedArray.prototype.push = function(value) {
+  this.data[this._length] = value;
+  this._length += 1;
+}
+
+AllocatedArray.prototype.length = function() {
+  return this._length;
+}
+
+AllocatedArray.prototype.remove = function(index) {
+  var value = this.data[index];
+  this.data[index] = this.data[this._length-1];
+  this._length -= 1;
+  return value;
+}
+
+AllocatedArray.prototype.get = function(index) {
+  return this.data[index];
 }
 
 function rgbDist(r1, g1, b1, r2, g2, b2) {
