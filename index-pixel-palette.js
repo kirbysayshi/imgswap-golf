@@ -149,8 +149,8 @@ function updateClusters(means, clusters, sourceData) {
       var targetClusterIndex = clusterIndexForPixel(means, sourceData, didx);
 
       if (targetClusterIndex != i) {
-        clusters[targetClusterIndex].push(cluster.get(index));
-        cluster.remove(index);
+        clusters[targetClusterIndex].push(cluster.get(j));
+        cluster.remove(j);
         movementCount += 1;
       }
     }
