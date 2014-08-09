@@ -256,11 +256,46 @@ function generateKInitialPixelMeans(k, source) {
 
 function predefinedPalettes(opt_name) {
   var predefined = {
+
     gameboy: [
       0, 60, 16, 1,
       6, 103, 49, 1,
       123, 180, 0, 1,
       138, 196, 0, 1
+    ],
+
+    'special-beam-cannon-cell': [
+      0, 0, 60, 1, // deep blue
+      83, 13, 65, 1, // purple
+      157, 37, 83, 1, // magenta
+      0, 0, 0, 1, // black,
+      252, 226, 0, 1 // yellow
+    ],
+
+    'special-beam-cannon': [
+      58, 12, 97, 1, // deep purple
+      170, 25, 174, 1, // bright purple
+      244, 59, 175, 1, // magenta
+      254, 251, 83, 1 // yellow
+      //254, 251, 231, 1 // white
+    ],
+
+    goku: [
+      27, 49, 197, 1, // blue cuffs
+      23, 102, 118, 1, // ss iris
+      213, 89, 0, 1, // orange gi
+      250, 200, 203, 1, // skin
+      233, 202, 86, 1, // ss eyebrows
+      255, 234, 255, 1 // ss hair highlights
+    ],
+
+    // http://www.colourlovers.com/palette/1652329/Muted_Kirby
+    'muted-kirby': [
+      34, 42, 79, 1,
+      172, 95, 139, 1,
+      207, 122, 122, 1,
+      251, 217, 216, 1/*,
+      255, 255, 255, 1*/
     ]
   };
 
