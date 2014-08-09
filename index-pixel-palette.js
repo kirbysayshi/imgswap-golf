@@ -4,8 +4,8 @@ var ctx = cvs.getContext('2d');
 document.body.appendChild(cvs);
 
 var SOURCE_PATH = options.source || 'mona.png';
-var PALETTE = options.palette
-  ? options.palette[0] == '[' && JSON.parse(options.palette)
+var PALETTE = (options.palette && options.palette[0] == '[')
+  ? JSON.parse(options.palette)
   : predefinedPalettes(options.palette);
 var ASYNC = options.async === 'false'
   ? false
