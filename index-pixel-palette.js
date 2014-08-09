@@ -233,45 +233,25 @@ function rgbDist2(r1, g1, b1, r2, g2, b2) {
 
 function generateKInitialPixelMeans(k, source) {
 
-  var allR = 0, allG = 0, allB = 0;
+  // TODO: this is vastly simplified than the previous initialization, but
+  // results in more iterations required to converge.
+  // ?source=PAX-East-2013-Petersens.jpg:
+  //   this: 27
+  //   previous: 17
+  // Perhaps using the mean and then interpolating would be better.
 
-  forEachPixel(source.data, function(r, g, b) {
-    allR += r;
-    allG += g;
-    allB += b;
-  });
+  var means = [];
 
-  var length = source.data.length / 4;
-  var meanR = Math.floor(allR / length);
-  var meanG = Math.floor(allG / length);
-  var meanB = Math.floor(allB / length);
+  for (var i = 0; i < k; i++) {
+    var ratio = i / k;
+    var r = ratio * 255;
+    var g = ratio * 255;
+    var b = ratio * 255;
+    var a = 1;
+    means.push(r, g, b, a);
+  }
 
-  var halfMeanR = Math.floor(meanR / 2);
-  var halfMeanG = Math.floor(meanG / 2);
-  var halfMeanB = Math.floor(meanB / 2);
-
-  var halfHalfMeanR = Math.floor(meanR / 2 / 2);
-  var halfHalfMeanG = Math.floor(meanG / 2 / 2);
-  var halfHalfMeanB = Math.floor(meanB / 2 / 2);
-
-  var max = 255;
-  var mean075R = Math.floor(meanR + ((max - meanR) / 2));
-  var mean075G = Math.floor(meanG + ((max - meanG) / 2));
-  var mean075B = Math.floor(meanB + ((max - meanB) / 2));
-
-  // If this is the full spectrum of the red channel:
-  // 0                                                                          255
-  // |---------------------------------------------------------------------------|
-  // And meanR = 175
-  // 0          halfHalfMean halfMeanR        meanR           mean075R          255
-  // |---------------------------------------------------------------------------|
-
-  return [
-    halfHalfMeanR, halfHalfMeanG, halfHalfMeanB, 1,
-    halfMeanR, halfMeanG, halfMeanB, 1,
-    meanR, meanG, meanB, 1,
-    mean075R, mean075G, mean075B, 1
-  ];
+  return means;
 }
 
 function predefinedPalettes(opt_name) {
