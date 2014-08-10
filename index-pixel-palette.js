@@ -152,6 +152,9 @@ function updateClusters(means, clusters, sourceData) {
         clusters[targetClusterIndex].push(cluster.get(j));
         cluster.remove(j);
         movementCount += 1;
+        // If we removed an element from this cluster, ensure we don't skip
+        // the next element.
+        j--;
       }
     }
   }
